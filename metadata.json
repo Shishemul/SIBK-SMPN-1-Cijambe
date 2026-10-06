@@ -1,0 +1,8 @@
+{
+  "name": "SI-BK SMPN 1 Cijambe",
+  "description": "Sistem Informasi Bimbingan Konseling, Pencatatan Pelanggaran & Prestasi Siswa SMP Negeri 1 Cijambe Subang dengan analisis risiko, tindak lanjut, integrasi WhatsApp, dan laporan PDF/Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
