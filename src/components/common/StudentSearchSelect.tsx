@@ -286,6 +286,17 @@ export const StudentSearchSelect: React.FC<StudentSearchSelectProps> = ({
                           +{s.totalAchievementPoints} Poin
                         </span>
                       )}
+                      {mode === 'counseling' && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                            s.counselorName
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}
+                        >
+                          {s.counselorName ? `Konselor: ${s.counselorName.split(',')[0]}` : 'Tanpa Konselor'}
+                        </span>
+                      )}
                       <span className="text-xs text-blue-600 font-semibold px-2 py-1 rounded bg-blue-50 hover:bg-blue-100">
                         Pilih
                       </span>

@@ -34,6 +34,7 @@ export const CounselingView: React.FC<CounselingViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | CounselingRecord['status']>('all');
+  const [onlyMyAssigned, setOnlyMyAssigned] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // New Counseling Form
@@ -82,7 +83,16 @@ export const CounselingView: React.FC<CounselingViewProps> = ({
       item.issueDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.counselorName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchSearch && matchStatus;
+
+    let matchAssigned = true;
+    if (onlyMyAssigned && currentUser?.role === 'guru') {
+      const student = students.find((s) => s.id === item.studentId);
+      matchAssigned =
+        item.counselorName.toLowerCase().includes(currentUser.name.toLowerCase()) ||
+        student?.counselorId === currentUser.id;
+    }
+
+    return matchSearch && matchStatus && matchAssigned;
   });
 
   return (
@@ -146,6 +156,19 @@ export const CounselingView: React.FC<CounselingViewProps> = ({
           >
             Selesai
           </button>
+          {currentUser.role === 'guru' && (
+            <button
+              onClick={() => setOnlyMyAssigned(!onlyMyAssigned)}
+              className={`px-3 py-1 rounded font-semibold transition-colors flex items-center gap-1.5 ${
+                onlyMyAssigned
+                  ? 'bg-purple-600 text-white shadow-2xs'
+                  : 'text-purple-700 hover:text-purple-900 bg-purple-50'
+              }`}
+            >
+              <HeartHandshake className="w-3.5 h-3.5" />
+              Siswa Binaan Saya
+            </button>
+          )}
         </div>
       </div>
 
@@ -235,11 +258,32 @@ export const CounselingView: React.FC<CounselingViewProps> = ({
               <StudentSearchSelect
                 students={students}
                 selectedStudentId={selectedStudentId}
-                onSelectStudent={(s) => setSelectedStudentId(s ? s.id : '')}
+                onSelectStudent={(s) => {
+                  if (s) {
+                    setSelectedStudentId(s.id);
+                    if (s.counselorName) {
+                      setCounselorName(s.counselorName);
+                    }
+                  } else {
+                    setSelectedStudentId('');
+                  }
+                }}
                 mode="counseling"
                 label="Pilih Siswa Konseli"
                 required
               />
+
+              {selectedStudentId && (() => {
+                const s = students.find((std) => std.id === selectedStudentId);
+                return s?.counselorName ? (
+                  <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-900 flex items-center gap-2">
+                    <HeartHandshake className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>
+                      Konselor Pendamping Terdaftar: <strong>{s.counselorName}</strong>
+                    </span>
+                  </div>
+                ) : null;
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

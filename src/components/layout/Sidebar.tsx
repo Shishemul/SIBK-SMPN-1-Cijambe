@@ -17,6 +17,7 @@ import {
   Rocket,
   X,
   Building2,
+  QrCode,
 } from 'lucide-react';
 import { UserRole, UserAccount, AppIdentity } from '../../types';
 
@@ -120,6 +121,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         icon: BarChart3,
         badge: 'PDF',
       },
+      {
+        id: 'student_portal',
+        label: 'Portal Siswa & Kartu QR',
+        icon: QrCode,
+        badge: 'QR',
+      },
     ];
 
     if (role === 'superadmin') {
@@ -130,37 +137,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: null,
       });
       items.push({
-        id: 'backup',
-        label: 'Cadangan & Supabase',
-        icon: Database,
-        badge: null,
-      });
-    }
-
-    if (role === 'superadmin' || role === 'guru') {
-      items.push({
         id: 'settings_identity',
         label: 'Identitas Sekolah & Aplikasi',
         icon: Building2,
         badge: 'Profil',
       });
+      items.push({
+        id: 'backup',
+        label: 'Cadangan & Supabase',
+        icon: Database,
+        badge: null,
+      });
+      items.push({
+        id: 'mysql_tutorial',
+        label: 'Tutorial Database MySQL',
+        icon: Database,
+        badge: 'SQL',
+      });
+      items.push({
+        id: 'deploy_tutorial',
+        label: 'Tutorial Deploy Hosting',
+        icon: Rocket,
+        badge: 'Guide',
+      });
     }
-
-    // Add MySQL Database Configuration Tutorial
-    items.push({
-      id: 'mysql_tutorial',
-      label: 'Tutorial Database MySQL',
-      icon: Database,
-      badge: 'SQL',
-    });
-
-    // Add Deployment Tutorial Guide
-    items.push({
-      id: 'deploy_tutorial',
-      label: 'Tutorial Deploy Hosting',
-      icon: Rocket,
-      badge: 'Guide',
-    });
 
     return items;
   };

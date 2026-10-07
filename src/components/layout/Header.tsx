@@ -13,6 +13,7 @@ import {
   Menu,
   ExternalLink,
   Rocket,
+  Scan,
 } from 'lucide-react';
 import { NotificationItem, UserAccount, AppIdentity } from '../../types';
 
@@ -27,6 +28,7 @@ interface HeaderProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onToggleMobileMenu?: () => void;
+  onOpenQrScanner?: () => void;
   appIdentity?: AppIdentity;
 }
 
@@ -41,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   isCollapsed,
   onToggleCollapse,
   onToggleMobileMenu,
+  onOpenQrScanner,
   appIdentity,
 }) => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -133,6 +136,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Zone 2: Top Right Actions */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Quick QR Scanner for Staff */}
+        {(currentUser.role === 'guru' || currentUser.role === 'superadmin') && onOpenQrScanner && (
+          <button
+            type="button"
+            onClick={onOpenQrScanner}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+            title="Pindai QR Code Siswa untuk membuka rekam jejak"
+          >
+            <Scan className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="hidden sm:inline font-medium text-[11px]">Scan QR Siswa</span>
+          </button>
+        )}
+
         {/* Real-time Notification Bell Drawer Toggle */}
         <div className="relative">
           <button

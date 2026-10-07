@@ -352,6 +352,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onOpenPrintSlip={onOpenPrintSlip}
         onNavigateTab={onNavigateTab}
         appIdentity={identity}
+        currentUser={currentUser}
       />
 
       {/* Sesi Konseling & Tindak Lanjut Terbaru */}

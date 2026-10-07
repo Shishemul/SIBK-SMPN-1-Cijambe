@@ -192,6 +192,18 @@ export const AppIdentitySettingsView: React.FC<AppIdentitySettingsViewProps> = (
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
+  if (currentUser.role !== 'superadmin') {
+    return (
+      <div className="p-8 text-center bg-white rounded-xl border border-slate-200 shadow-xs max-w-xl mx-auto my-12">
+        <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-slate-800">Akses Terbatas (Khusus Superadmin)</h3>
+        <p className="text-xs text-slate-500 mt-1">
+          Pengaturan Identitas Aplikasi & Sekolah hanya dapat diakses dan diubah oleh akun dengan hak akses Superadmin (Kepala Sekolah / Administrator).
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-8">
       {/* Top Banner Header */}

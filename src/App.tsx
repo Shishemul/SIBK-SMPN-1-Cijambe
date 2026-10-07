@@ -31,6 +31,7 @@ import { StudentCounselingModal } from './components/dashboard/StudentCounseling
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { MySqlTutorialView } from './components/database/MySqlTutorialView';
 import { AppIdentitySettingsView } from './components/settings/AppIdentitySettingsView';
+import { QRScannerModal } from './components/qrcode/QRScannerModal';
 
 export default function App() {
   // Authentication State
@@ -75,6 +76,8 @@ export default function App() {
 
   // Modals / Overlays
   const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<Student | null>(null);
+  const [selectedPortalStudentId, setSelectedPortalStudentId] = useState<string | null>(null);
+  const [isGlobalQrScannerOpen, setIsGlobalQrScannerOpen] = useState<boolean>(false);
   const [printSlipState, setPrintSlipState] = useState<{
     isOpen: boolean;
     type: 'violation_statement' | 'parent_summons' | 'violation_slip' | 'achievement_certificate' | 'monthly_report';
@@ -86,16 +89,58 @@ export default function App() {
     type: 'violation_statement',
   });
 
-  // Synchronize initial tab based on role when logged in
+  // Deep link detection from QR code scan (?studentId=... or ?nisn=...)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const studentId = params.get('studentId');
+      const nisn = params.get('nisn');
+      const tab = params.get('tab');
+
+      if (studentId || nisn) {
+        const found = students.find(
+          (s) => (studentId && s.id === studentId) || (nisn && s.nisn === nisn)
+        );
+        if (found) {
+          setSelectedPortalStudentId(found.id);
+          if (currentUser && (currentUser.role === 'guru' || currentUser.role === 'superadmin')) {
+            setSelectedStudentForProfile(found);
+            storageService.addNotification({
+              title: 'QR Code Siswa Berhasil Dipindai',
+              message: `Rekam jejak ${found.name} (Kelas ${found.className}, NISN: ${found.nisn}) berhasil dibuka melalui pemindaian QR Code.`,
+              type: 'system',
+              linkTab: 'student_portal',
+            });
+            setNotifications(storageService.getNotifications());
+          } else {
+            setCurrentTab('student_portal');
+          }
+        }
+      } else if (tab) {
+        setCurrentTab(tab);
+      }
+    } catch (err) {
+      console.warn('Error reading URL params', err);
+    }
+  }, [students, currentUser]);
+
+  // Synchronize initial tab based on role when logged in and guard superadmin-only tabs
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role === 'siswa' || currentUser.role === 'wali_murid') {
         setCurrentTab('student_portal');
-      } else {
+      } else if (
+        currentUser.role !== 'superadmin' &&
+        (currentTab === 'settings_identity' ||
+          currentTab === 'mysql_tutorial' ||
+          currentTab === 'deploy_tutorial' ||
+          currentTab === 'users' ||
+          currentTab === 'backup')
+      ) {
         setCurrentTab('dashboard');
       }
     }
-  }, [currentUser]);
+  }, [currentUser, currentTab]);
 
   // Synchronize document title with configured App Identity
   useEffect(() => {
@@ -317,6 +362,71 @@ export default function App() {
     setStudents(updated);
   };
 
+  // Counselor Assignment Handlers (1 Siswa -> 1 Konselor, 1 Guru -> Banyak Siswa)
+  const handleAssignCounselor = (
+    studentId: string,
+    counselor: { id: string; name: string; nip?: string; phone?: string } | null
+  ) => {
+    const updated = storageService.assignCounselorToStudent(studentId, counselor);
+    setStudents(updated);
+    if (selectedStudentForProfile && selectedStudentForProfile.id === studentId) {
+      const updatedStudent = updated.find((s) => s.id === studentId) || null;
+      setSelectedStudentForProfile(updatedStudent);
+    }
+    if (counselor) {
+      storageService.addNotification({
+        title: 'Konselor Siswa Ditetapkan',
+        message: `Siswa berhasil dihubungkan dengan guru konselor ${counselor.name}.`,
+        type: 'system',
+        linkTab: 'classes',
+        studentId,
+      });
+    } else {
+      storageService.addNotification({
+        title: 'Penugasan Konselor Dihapus',
+        message: 'Status konselor pendamping untuk siswa telah diatur ulang menjadi belum ditugaskan.',
+        type: 'system',
+        linkTab: 'classes',
+        studentId,
+      });
+    }
+    setNotifications(storageService.getNotifications());
+  };
+
+  const handleBulkAssignCounselor = (
+    studentIds: string[],
+    counselor: { id: string; name: string; nip?: string; phone?: string } | null
+  ) => {
+    const updated = storageService.bulkAssignCounselor(studentIds, counselor);
+    setStudents(updated);
+    if (counselor) {
+      storageService.addNotification({
+        title: 'Distribusi Konselor Berhasil',
+        message: `Sebanyak ${studentIds.length} siswa berhasil dihubungkan ke konselor ${counselor.name}.`,
+        type: 'system',
+        linkTab: 'classes',
+      });
+    }
+    setNotifications(storageService.getNotifications());
+  };
+
+  const handleAssignClassToCounselor = (
+    className: string,
+    counselor: { id: string; name: string; nip?: string; phone?: string } | null
+  ) => {
+    const updated = storageService.bulkAssignClassToCounselor(className, counselor);
+    setStudents(updated);
+    if (counselor) {
+      storageService.addNotification({
+        title: 'Penugasan Rombel ke Konselor Berhasil',
+        message: `Seluruh siswa di kelas ${className} telah dihubungkan ke konselor ${counselor.name}.`,
+        type: 'system',
+        linkTab: 'classes',
+      });
+    }
+    setNotifications(storageService.getNotifications());
+  };
+
   // Master Rules Handlers
   const handleAddViolationMaster = (item: Omit<ViolationMaster, 'id'>) => {
     const newItem: ViolationMaster = { ...item, id: `vm-${Date.now().toString().slice(-4)}` };
@@ -367,10 +477,11 @@ export default function App() {
     setUsers(updated);
   };
 
-  // Helper for Student / Guardian view student resolution
-  const targetPortalStudent = students.find(
-    (s) => s.id === currentUser?.studentId || s.name === currentUser?.name
-  ) || students[0];
+  // Helper for Student / Guardian view student resolution (supports QR code & staff selection)
+  const targetPortalStudent =
+    (selectedPortalStudentId ? students.find((s) => s.id === selectedPortalStudentId) : null) ||
+    students.find((s) => s.id === currentUser?.studentId || s.name === currentUser?.name) ||
+    students[0];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -406,6 +517,7 @@ export default function App() {
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={handleToggleSidebarCollapse}
               onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+              onOpenQrScanner={() => setIsGlobalQrScannerOpen(true)}
               appIdentity={appIdentity}
             />
 
@@ -491,12 +603,16 @@ export default function App() {
                   currentUser={currentUser}
                   students={students}
                   classes={classes}
+                  users={users}
                   onAddStudent={handleAddStudent}
                   onBulkAddStudents={handleBulkAddStudents}
                   onUpdateStudentClass={handleUpdateStudentClass}
                   onPromoteClassBulk={handlePromoteClassBulk}
                   onDeleteStudent={handleDeleteStudent}
                   onSelectStudentProfile={(std) => setSelectedStudentForProfile(std)}
+                  onAssignCounselor={handleAssignCounselor}
+                  onBulkAssignCounselor={handleBulkAssignCounselor}
+                  onAssignClassToCounselor={handleAssignClassToCounselor}
                 />
               )}
 
@@ -552,8 +668,8 @@ export default function App() {
                 />
               )}
 
-              {/* Tab: Pengaturan Identitas Sekolah & Aplikasi (Superadmin / Guru) */}
-              {currentTab === 'settings_identity' && (
+              {/* Tab: Pengaturan Identitas Sekolah & Aplikasi (Khusus Superadmin) */}
+              {currentTab === 'settings_identity' && currentUser.role === 'superadmin' && (
                 <AppIdentitySettingsView
                   currentUser={currentUser}
                   identity={appIdentity}
@@ -562,13 +678,13 @@ export default function App() {
                 />
               )}
 
-              {/* Tab: Tutorial Konfigurasi Database MySQL */}
-              {currentTab === 'mysql_tutorial' && (
+              {/* Tab: Tutorial Konfigurasi Database MySQL (Khusus Superadmin) */}
+              {currentTab === 'mysql_tutorial' && currentUser.role === 'superadmin' && (
                 <MySqlTutorialView />
               )}
 
-              {/* Tab: Tutorial Deploy ke Hosting */}
-              {currentTab === 'deploy_tutorial' && (
+              {/* Tab: Tutorial Deploy ke Hosting (Khusus Superadmin) */}
+              {currentTab === 'deploy_tutorial' && currentUser.role === 'superadmin' && (
                 <DeployTutorialView />
               )}
 
@@ -577,6 +693,8 @@ export default function App() {
                 <StudentPortalView
                   currentUser={currentUser}
                   student={targetPortalStudent}
+                  students={students}
+                  onSelectStudent={(s) => setSelectedPortalStudentId(s.id)}
                   violations={violations.filter((v) => v.studentId === targetPortalStudent.id)}
                   achievements={achievements.filter((a) => a.studentId === targetPortalStudent.id)}
                   counselingRecords={counselingRecords.filter((c) => c.studentId === targetPortalStudent.id)}
@@ -589,6 +707,8 @@ export default function App() {
                       achievement: ach,
                     });
                   }}
+                  onOpenStudentProfile={(s) => setSelectedStudentForProfile(s)}
+                  appIdentity={appIdentity}
                 />
               )}
             </main>
@@ -612,8 +732,10 @@ export default function App() {
           counselingHistory={counselingRecords.filter((c) => c.studentId === selectedStudentForProfile.id)}
           violations={violations.filter((v) => v.studentId === selectedStudentForProfile.id)}
           achievements={achievements.filter((a) => a.studentId === selectedStudentForProfile.id)}
+          counselors={users}
           onClose={() => setSelectedStudentForProfile(null)}
           onAddCounseling={handleAddCounseling}
+          onAssignCounselor={handleAssignCounselor}
           onOpenPrintSlip={(type, viol) => {
             setPrintSlipState({
               isOpen: true,
@@ -634,6 +756,23 @@ export default function App() {
           achievement={printSlipState.achievement}
           appIdentity={appIdentity}
           onClose={() => setPrintSlipState({ ...printSlipState, isOpen: false })}
+        />
+      )}
+
+      {/* Global QR Code Scanner Modal */}
+      {isGlobalQrScannerOpen && (
+        <QRScannerModal
+          students={students}
+          isOpen={isGlobalQrScannerOpen}
+          onClose={() => setIsGlobalQrScannerOpen(false)}
+          onSelectStudent={(selected) => {
+            setSelectedPortalStudentId(selected.id);
+            if (currentUser?.role === 'guru' || currentUser?.role === 'superadmin') {
+              setSelectedStudentForProfile(selected);
+            } else {
+              setCurrentTab('student_portal');
+            }
+          }}
         />
       )}
     </div>

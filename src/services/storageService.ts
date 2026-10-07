@@ -114,6 +114,103 @@ export const storageService = {
     setItem(STORAGE_KEYS.STUDENTS, students);
   },
 
+  // Hubungkan Siswa dengan Guru/Konselor (1 Siswa -> 1 Konselor, 1 Guru -> Banyak Siswa)
+  assignCounselorToStudent(
+    studentId: string,
+    counselor: { id: string; name: string; nip?: string; phone?: string } | null
+  ): Student[] {
+    const students = this.getStudents();
+    const updated = students.map((s) => {
+      if (s.id === studentId) {
+        if (!counselor) {
+          return {
+            ...s,
+            counselorId: undefined,
+            counselorName: undefined,
+            counselorNip: undefined,
+            counselorPhone: undefined,
+            assignedAt: undefined,
+          };
+        }
+        return {
+          ...s,
+          counselorId: counselor.id,
+          counselorName: counselor.name,
+          counselorNip: counselor.nip,
+          counselorPhone: counselor.phone,
+          assignedAt: new Date().toISOString().substring(0, 10),
+        };
+      }
+      return s;
+    });
+    this.saveStudents(updated);
+    return updated;
+  },
+
+  bulkAssignCounselor(
+    studentIds: string[],
+    counselor: { id: string; name: string; nip?: string; phone?: string } | null
+  ): Student[] {
+    const students = this.getStudents();
+    const updated = students.map((s) => {
+      if (studentIds.includes(s.id)) {
+        if (!counselor) {
+          return {
+            ...s,
+            counselorId: undefined,
+            counselorName: undefined,
+            counselorNip: undefined,
+            counselorPhone: undefined,
+            assignedAt: undefined,
+          };
+        }
+        return {
+          ...s,
+          counselorId: counselor.id,
+          counselorName: counselor.name,
+          counselorNip: counselor.nip,
+          counselorPhone: counselor.phone,
+          assignedAt: new Date().toISOString().substring(0, 10),
+        };
+      }
+      return s;
+    });
+    this.saveStudents(updated);
+    return updated;
+  },
+
+  bulkAssignClassToCounselor(
+    className: string,
+    counselor: { id: string; name: string; nip?: string; phone?: string } | null
+  ): Student[] {
+    const students = this.getStudents();
+    const updated = students.map((s) => {
+      if (s.className === className) {
+        if (!counselor) {
+          return {
+            ...s,
+            counselorId: undefined,
+            counselorName: undefined,
+            counselorNip: undefined,
+            counselorPhone: undefined,
+            assignedAt: undefined,
+          };
+        }
+        return {
+          ...s,
+          counselorId: counselor.id,
+          counselorName: counselor.name,
+          counselorNip: counselor.nip,
+          counselorPhone: counselor.phone,
+          assignedAt: new Date().toISOString().substring(0, 10),
+        };
+      }
+      return s;
+    });
+    this.saveStudents(updated);
+    return updated;
+  },
+
   // Classes
   getClasses(): ClassItem[] {
     return getItem<ClassItem[]>(STORAGE_KEYS.CLASSES, INITIAL_CLASSES);

@@ -54,6 +54,12 @@ export interface Student {
   totalAchievementPoints: number;
   counselingStatus?: 'aman' | 'pantau' | 'peringatan_1' | 'peringatan_2' | 'kritis';
   notes?: string;
+  // Relasi Guru BK / Konselor Pendamping (1 Siswa -> 1 Konselor, 1 Guru -> Banyak Siswa)
+  counselorId?: string; // ID UserAccount guru/konselor
+  counselorName?: string; // Nama lengkap & gelar guru/konselor
+  counselorNip?: string; // NIP guru/konselor
+  counselorPhone?: string; // No WA/HP konselor
+  assignedAt?: string; // Tanggal penugasan konselor
 }
 
 export interface ClassItem {
